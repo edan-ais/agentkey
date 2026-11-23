@@ -39,7 +39,9 @@
     "!*.test.mjs",
     "!package-candidate.mjs",
     "README.md",
-    "AGENTKEY_GUIDE.md"
+    "AGENTKEY_GUIDE.md",
+    "LICENSE",
+    "NOTICE"
   ],
   "dependencies": {
     "@tryagentkey/runtime": "0.1.0"

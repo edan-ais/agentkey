@@ -17,7 +17,9 @@
     "server.mjs",
     "config.mjs",
     "http.mjs",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "NOTICE"
   ],
   "dependencies": {
     "tryagentkey": "^0.5.0"

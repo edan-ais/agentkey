@@ -9,7 +9,9 @@
   },
   "files": [
     "index.mjs",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "NOTICE"
   ],
   "engines": {
     "node": ">=22"
