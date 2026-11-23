@@ -1,0 +1,64 @@
+{
+  "name": "tryagentkey",
+  "version": "0.5.0",
+  "author": "AgentKey, Inc.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./index.d.mts",
+        "default": "./index.mjs"
+      },
+      "require": {
+        "types": "./index.d.cts",
+        "default": "./index.cjs"
+      }
+    },
+    "./connector": "./connector.mjs",
+    "./developer": "./developer.mjs",
+    "./auto": {
+      "types": "./auto.d.mts",
+      "default": "./auto.mjs"
+    }
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "description": "30-second auth & local secrets vault for AI agents. Zero config, local-first.",
+  "bin": {
+    "tryagentkey": "./bin/agentkey.mjs",
+    "agentkey": "./bin/agentkey.mjs"
+  },
+  "files": [
+    "*.mjs",
+    "*.cjs",
+    "*.d.mts",
+    "*.d.cts",
+    "local/",
+    "bin/",
+    "!*.test.mjs",
+    "!package-candidate.mjs",
+    "README.md",
+    "AGENTKEY_GUIDE.md"
+  ],
+  "dependencies": {
+    "@tryagentkey/runtime": "0.1.0"
+  },
+  "main": "./index.cjs",
+  "types": "./index.d.mts",
+  "keywords": [
+    "ai-agents",
+    "auth",
+    "vault",
+    "playwright",
+    "vercel-ai",
+    "langchain",
+    "mcp"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/edan-ais/agentkey.git",
+    "directory": "packages/sdk"
+  }
+}

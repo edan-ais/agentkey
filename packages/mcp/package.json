@@ -1,0 +1,39 @@
+{
+  "name": "@tryagentkey/mcp",
+  "version": "0.2.0",
+  "author": "AgentKey, Inc.",
+  "description": "AgentKey MCP server: owner-approved logins for AI agents without exposing passwords.",
+  "type": "module",
+  "bin": {
+    "tryagentkey-mcp": "server.mjs",
+    "agentkey-mcp": "server.mjs"
+  },
+  "exports": {
+    ".": "./server.mjs",
+    "./config": "./config.mjs",
+    "./http": "./http.mjs"
+  },
+  "files": [
+    "server.mjs",
+    "config.mjs",
+    "http.mjs",
+    "README.md"
+  ],
+  "dependencies": {
+    "tryagentkey": "^0.5.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "os": [
+    "win32",
+    "darwin",
+    "linux"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/edan-ais/agentkey.git",
+    "directory": "packages/mcp"
+  }
+}

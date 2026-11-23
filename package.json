@@ -1,0 +1,9 @@
+{
+  "name": "agentkey-developer-packages",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "license": "Apache-2.0"
+}

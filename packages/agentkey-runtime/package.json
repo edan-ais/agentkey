@@ -1,0 +1,23 @@
+{
+  "name": "@tryagentkey/runtime",
+  "version": "0.1.0",
+  "author": "AgentKey, Inc.",
+  "type": "module",
+  "main": "index.mjs",
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/edan-ais/agentkey.git",
+    "directory": "packages/agentkey-runtime"
+  }
+}
