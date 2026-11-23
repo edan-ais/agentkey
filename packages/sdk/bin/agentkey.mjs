@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// npx tryagentkey         — one command: vault + starter file + checks
 // npx tryagentkey init    — Free Local Mode: local vault + one-tap local approval
 // npx tryagentkey link    — move this project to AgentKey Cloud (pairing code)
 // npx tryagentkey doctor  — plain-English checks
@@ -14,6 +15,7 @@ import {createLocal} from '../local/index.mjs';
 import {openVault,agentkeyHome} from '../local/vault.mjs';
 import {writeEnvVars} from '../local/env.mjs';
 import {createRequire} from 'node:module';
+import {STARTERS,STARTER_FILE} from '../starters.mjs';
 import {realpathSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 
@@ -21,7 +23,7 @@ const BANNER='Running in Free Local Mode (Single-User). Upgrading to multi-tenan
 export async function initLocal({cwd=process.cwd(),log=console.log,...o}={}){
  const local=createLocal({onLink:(u,w)=>log(`AgentKey: ${w}\n  here is your link → ${u}`),...o});
  const id=await local.setup();writeEnvVars(cwd,{AGENTKEY_MODE:'local',AGENTKEY_LOCAL_KEY:id});
- log(`✓ Local vault ready (${local.vault.file})\n✓ .env updated (AGENTKEY_MODE=local), kept out of git\n${BANNER}\nNext: const ak = await agentkey(); await ak.login(url, { page })`);
+ log(`✓ Local vault ready (${join(o.home??agentkeyHome(),"vault.enc")})\n✓ .env updated (AGENTKEY_MODE=local), kept out of git\n${BANNER}\nNext: const ak = await agentkey(); await ak.login(url, { page })`);
  return {vault_id:id};
 }
 export async function status({cwd=process.cwd(),log=console.log,home=agentkeyHome()}={}){
@@ -80,11 +82,26 @@ export async function forget(target,{log=console.log,home=agentkeyHome()}={}){
  openVault(home).forget(new URL(target).origin);log('✓ Deleted the saved login and its permissions.');
 }
 
+// Bare `npx tryagentkey`: everything in one go. Sets up the vault (or keeps an
+// existing cloud link), writes one starter file for the detected framework,
+// then runs the checks and prints only what still needs the developer.
+export async function setup({cwd=process.cwd(),log=console.log,doctorImpl=doctor,...o}={}){
+ const cfg=readEnv(process.env,cwd);const p=detectProject(cwd);
+ if(cfg.apiKey&&cfg.mode!=='local')log('✓ Already linked to AgentKey Cloud — keeping it.');
+ else await initLocal({cwd,log,...o});
+ const file=join(cwd,STARTER_FILE);
+ if(!existsSync(file)){writeFileSync(file,STARTERS[p.framework]??STARTERS.plain);log(`✓ Wrote ${STARTER_FILE} for ${p.framework==='plain'?'your agent':p.framework}`);}
+ else log(`• ${STARTER_FILE} already exists — left it alone`);
+ const out=await doctorImpl({cwd,home:o.home??agentkeyHome(),log:()=>{}});const todo=out.filter(l=>l.startsWith('✗'));
+ log(todo.length?'Still needed:\n'+todo.map(l=>'  '+l.slice(2)).join('\n'):'✓ All checks passed. Import { agentkeyTools } from ./'+STARTER_FILE+' and give them to your agent.');
+ return {framework:p.framework,todo};
+}
+
 let isMain=false;try{isMain=!!process.argv[1]&&realpathSync(process.argv[1])===fileURLToPath(import.meta.url);}catch{}
 if(isMain){
  const [cmd,...rest]=process.argv.slice(2);const flag=n=>{const i=rest.indexOf('--'+n);return i>=0?rest[i+1]:undefined;};
- const usage='tryagentkey init | link [--code CODE] [--name NAME] | doctor | status | permissions | revoke <id|site|--all> | forget <site> | secret set NAME';
- const run=cmd==='init'?(rest.includes('--cloud')?link({code:flag('code'),name:flag('name')}):initLocal()):cmd==='link'?link({code:flag('code'),name:flag('name')}):cmd==='doctor'?doctor():cmd==='status'?status():cmd==='permissions'?permissions():cmd==='revoke'?revoke(rest[0]):cmd==='forget'?forget(rest[0]):cmd==='secret'&&rest[0]==='set'&&rest[1]?setSecret(rest[1]):Promise.reject(new AgentKeyError('usage',usage));
+ const usage='tryagentkey [setup] | init | link [--code CODE] [--name NAME] | doctor | status | permissions | revoke <id|site|--all> | forget <site> | secret set NAME';
+ const run=(!cmd||cmd==='setup')?setup():cmd==='init'?(rest.includes('--cloud')?link({code:flag('code'),name:flag('name')}):initLocal()):cmd==='link'?link({code:flag('code'),name:flag('name')}):cmd==='doctor'?doctor():cmd==='status'?status():cmd==='permissions'?permissions():cmd==='revoke'?revoke(rest[0]):cmd==='forget'?forget(rest[0]):cmd==='secret'&&rest[0]==='set'&&rest[1]?setSecret(rest[1]):Promise.reject(new AgentKeyError('usage',usage));
  run.then(()=>process.exit(0),e=>{console.error('AgentKey: '+(e.hint||e.message));process.exit(1);});
 }
 

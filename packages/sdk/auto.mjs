@@ -143,6 +143,7 @@ async function shapeTools(plain,framework,fns){
   if(framework==='vercel-ai'){const {tool,jsonSchema}=await import('ai');return Object.fromEntries(entries.map(([n,t])=>[n,tool({description:t.description,inputSchema:jsonSchema(t.parameters),parameters:jsonSchema(t.parameters),execute:a=>t.execute(a)})]));}
   if(framework==='openai-agents'){const {tool}=await import('@openai/agents');return entries.map(([n,t])=>tool({name:n,description:t.description,parameters:t.parameters,strict:false,execute:a=>t.execute(a)}));}
   if(framework==='mcp')return {tools:entries.map(([n,t])=>({name:n,description:t.description,inputSchema:t.parameters})),call:async(name,args)=>{const t=plain[name];if(!t)throw new AgentKeyError('unknown_tool');return {content:[{type:'text',text:JSON.stringify(await t.execute(args??{}))}]};},login:fns.login,withAuth:fns.withAuth};
+  if(framework==='mastra'){const {createTool}=await import('@mastra/core/tools');const {z}=await import('zod');return Object.fromEntries(entries.map(([n,t])=>[n,createTool({id:n,description:t.description,inputSchema:z.object({url:z.string().url().describe('https sign-in page')}).strict(),execute:async(input)=>t.execute(input)})]));}
   if(framework==='langchain'){const {DynamicStructuredTool}=await import('@langchain/core/tools');return entries.map(([n,t])=>new DynamicStructuredTool({name:n,description:t.description,schema:t.parameters,func:async a=>JSON.stringify(await t.execute(a))}));}
  }catch{}
  // Plain JS/TS: tools.login(url), tools.withAuth(url, fn), plus the tool definition.

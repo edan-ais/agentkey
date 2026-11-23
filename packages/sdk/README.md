@@ -3,7 +3,7 @@
 **30-second auth & local secrets vault for AI agents. Zero config, local-first.**
 
 ```bash
-npm install tryagentkey && npx tryagentkey init
+npm install tryagentkey && npx tryagentkey   # sets up the vault, writes agentkey.mjs for your framework, runs checks
 ```
 ```js
 const ak = await agentkey(); await ak.login("https://github.com/login", { page });
