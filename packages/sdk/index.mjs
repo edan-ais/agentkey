@@ -32,9 +32,30 @@ export class AgentKeyClient {
  requestStatus(id){return this.call('/v1/requests/'+validID(id),undefined,['request_id','agent_id','agent_name','executor_id','executor_key_id','origin','action','state','expires_at','grant_id']);}
  use(grant_id,{origin,executor_key_id,idempotency_key}){validID(grant_id);validOrigin(origin);validID(executor_key_id);validID(idempotency_key);return this.call('/v1/grants/'+grant_id+'/use',{origin,executor_key_id,idempotency_key},['operation_id','status','code','next_action']);}
  receipt(id){return this.call('/v1/operations/'+validID(id),undefined,['operation_id','grant_id','status','reserved_at','finished_at']);}
+ // Owner-approved AgentKey rules card. Returns each agent's version state; a new
+ // card or change list arrives as `update` and is acknowledged (received and will
+ // be followed) unless acknowledge:false.
+ async rules({acknowledge=true}={}){
+  const r=await this.fetchImpl(this.baseURL+'/v1/updates',{method:'GET',headers:{Authorization:'Bearer '+await this.token()},redirect:'manual',signal:AbortSignal.timeout(15000)});
+  if(!r.ok)throw Error('agentkey_request_failed');const data=await r.json();
+  const rows=Array.isArray(data?.agent_rules)?data.agent_rules:[];const out=[];
+  for(const row of rows){
+   if(!row||!uuid.test(String(row.agent_id)))continue;
+   const u=row.update;const item={agent_id:row.agent_id,current_version:Number(row.current_version)||0,acknowledged_version:Number(row.acknowledged_version)||0,status:String(row.status),update:null};
+   if(u&&uuid.test(String(u.delivery_id))&&Number.isSafeInteger(u.version)&&typeof u.text==='string'&&/^[0-9a-f]{64}$/.test(String(u.content_hash))){
+    item.update={version:u.version,kind:u.kind==='diff'?'diff':'full',text:u.text};
+    if(acknowledge){
+     const a=await this.fetchImpl(this.baseURL+'/v1/updates/ack',{method:'POST',headers:{Authorization:'Bearer '+await this.token(),'Content-Type':'application/json'},body:JSON.stringify({delivery_id:u.delivery_id,version:u.version,content_hash:u.content_hash}),redirect:'manual',signal:AbortSignal.timeout(15000)});
+     if(a.ok){item.acknowledged_version=u.version;item.status='acknowledged';}
+    }
+   }
+   out.push(item);
+  }
+  return out;
+ }
 }
 export function agentKeyTools(client){
- return {agentkey_request:args=>client.request(args),agentkey_request_status:({request_id})=>client.requestStatus(request_id),agentkey_use:({grant_id,...args})=>client.use(grant_id,args),agentkey_receipt:({operation_id})=>client.receipt(operation_id)};
+ return {agentkey_request:args=>client.request(args),agentkey_request_status:({request_id})=>client.requestStatus(request_id),agentkey_use:({grant_id,...args})=>client.use(grant_id,args),agentkey_receipt:({operation_id})=>client.receipt(operation_id),agentkey_rules:()=>client.rules()};
 }
 
 export { createExistingBrowserLogin, existingBrowserLoginTools } from './existing-browser-login.mjs';

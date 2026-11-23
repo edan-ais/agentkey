@@ -18,6 +18,7 @@ export type RequestStatus = Partial<{
 }>;
 export type OperationResult = Partial<{operation_id: string; status: string; code: string; next_action: string}>;
 export type OperationReceipt = Partial<{operation_id: string; grant_id: string; status: string; reserved_at: string; finished_at: string | null}>;
+export interface AgentRules {agent_id: string; current_version: number; acknowledged_version: number; status: string; update: {version: number; kind: 'full' | 'diff'; text: string} | null}
 export class AgentKeyClient {
   constructor(options: {baseURL?: string; token: () => string | Promise<string>; fetchImpl?: typeof fetch});
   request(input: RequestInput): Promise<RequestResult>;
@@ -25,11 +26,13 @@ export class AgentKeyClient {
   requestStatus(id: string): Promise<RequestStatus>;
   use(grantId: string, input: UseInput): Promise<OperationResult>;
   receipt(id: string): Promise<OperationReceipt>;
+  rules(options?: {acknowledge?: boolean}): Promise<AgentRules[]>;
 }
 export function agentKeyTools(client: AgentKeyClient): {
   agentkey_request(input: RequestInput): Promise<RequestResult>;
   agentkey_request_status(input: {request_id: string}): Promise<RequestStatus>;
   agentkey_use(input: UseInput & {grant_id: string}): Promise<OperationResult>;
   agentkey_receipt(input: {operation_id: string}): Promise<OperationReceipt>;
+  agentkey_rules(): Promise<AgentRules[]>;
 };
 export * from "./auto.mjs";
