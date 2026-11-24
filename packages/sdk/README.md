@@ -198,3 +198,10 @@ account signed in; verify the account identity before account-sensitive work.
 An observed human-verification check returns challenge_required with challenge_type human_verification. The owner completes it in that same browser. Call resume to recheck the existing attempt, never to refill or solve the check. The original verification window is at most five minutes and is not extended. Expiry or an unrecognized challenge stays unverified. A fill or submission is not a successful sign-in.
 
 Production acceptance is pending an authorized original browser/profile and paired executor. Minimum extension version for the explicit human_verification state is 0.3.1. The installed extension must support the matching challenge state. Store0.3.0 supports target-v2 but does not report human_verification yet. This integration does not remotely control the owner's personal browser or connect Instinct to it.
+
+
+## Bare setup for coding agents
+
+Run `npx tryagentkey`. Free Local Mode needs no AgentKey account. Setup first preflights all instruction files, then appends a managed section to project AGENTS.md and to an existing CLAUDE.md, preserving other text. Your coding agent reads those instructions and wires the local SDK into its actual existing browser tools; the developer does not add the lines manually. Existing instruction files with symlinks, hard links, conflicting managed markers or a different managed section are refused before setup begins. Existing files are never rewritten. Writes are append-only with checks before and after, not a multi-file transaction or a guarantee against concurrent edits. A late failure reports partial changes; inspect them before retrying. Existing cloud configurations are preserved and their doctor check may contact the cloud service. Free Local Mode makes no AgentKey cloud calls.
+
+This installs instructions, not a running MCP server or automatic browser attachment. Agent wiring remains pending until the supported coding agent carries it out and a real authorized login completes. Runtime agents that cannot edit their project still need a browser bridge. No website login permission is granted by setup.

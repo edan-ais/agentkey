@@ -1,6 +1,6 @@
 # AgentKey guide for AI coding assistants
 
-Wire AgentKey into this project like this. Do not invent other setup.
+Bare npx tryagentkey installs project instructions for coding agents. Finish the existing-browser wiring yourself so the developer need not edit lines. The examples below are for the coding agent to apply, not another manual setup task for the developer. Do not claim runtime wiring is complete until the actual agent uses its login tool.
 
 ## Install
 ```bash

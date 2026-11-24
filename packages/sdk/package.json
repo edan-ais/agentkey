@@ -1,6 +1,6 @@
 {
   "name": "tryagentkey",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "author": "AgentKey, Inc.",
   "type": "module",
   "exports": {
