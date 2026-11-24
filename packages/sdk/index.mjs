@@ -10,7 +10,15 @@ export class AgentKeyClient {
  }
  async call(path,body,allowed){
   const r=await this.fetchImpl(this.baseURL+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+await this.token(),'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),redirect:'manual',signal:AbortSignal.timeout(15000)});
-  if(!r.ok)throw Error('agentkey_request_failed');const data=await r.json();
+  if(!r.ok){
+   // Never surface arbitrary upstream text, account details, or SQL errors.
+   const problem=await r.json().catch(()=>null);
+   if(path==='/v2/target-requests'&&r.status===403&&problem?.code==='target_origin_not_allowed'){
+    const e=Error('The owner must allow this exact website for this agent in AgentKey Contacts. This does not approve a login. Ask the owner to review access settings before trying again.');
+    e.code='target_origin_not_allowed';e.retryable=false;throw e;
+   }
+   throw Error('agentkey_request_failed');
+  }const data=await r.json();
   if(!data||typeof data!=='object'||Array.isArray(data))throw Error('invalid_response');
   const safe=Object.fromEntries(allowed.filter(k=>Object.hasOwn(data,k)).map(k=>[k,data[k]]));
   if(Object.values(safe).some(v=>v!==null&&!['string','number','boolean'].includes(typeof v)))throw Error('invalid_response');return safe;
