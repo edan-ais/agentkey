@@ -59,7 +59,7 @@ export async function agentkey(options={}){
  const mode=options.mode??cfg.mode??(cfg.apiKey||options.apiKey?'cloud':'local');
  if(mode==='local')return localAgentkey({...options,cwd,onLink});
  if(mode!=='cloud')throw new AgentKeyError('invalid_mode','AGENTKEY_MODE must be local or cloud.');
- if(!cfg.apiKey)throw new AgentKeyError('missing_api_key','Cloud mode needs AGENTKEY_API_KEY. Run `npx tryagentkey link`, or remove AGENTKEY_MODE=cloud for Free Local Mode.');
+ if(!(options.apiKey??cfg.apiKey))throw new AgentKeyError('missing_api_key','Cloud mode needs AGENTKEY_API_KEY. Run `npx tryagentkey link`, or remove AGENTKEY_MODE=cloud for Free Local Mode.');
  const k=decodeApiKey(options.apiKey??cfg.apiKey);
  const token=tokenSource(k,fetchImpl);
  const client=new AgentKeyClient({baseURL,token,fetchImpl});
