@@ -189,3 +189,12 @@ account verifier or authenticated success selector when possible. Without one,
 the generic fallback requires a visible sign-out control on a nonblank page
 without a login form or challenge. This generic signal does not identify which
 account signed in; verify the account identity before account-sensitive work.
+
+
+## Existing agent-browser integration (staged release)
+
+`tryagentkey/browser` exports setupExistingBrowserAgentKey for an already-running, owner-authorized Playwright-compatible browser with AgentKey's paired extension. Additional entry points are browser/puppeteer, browser/playwright, browser/framework, browser/openai-agents and browser/conformance. This never opens another browser or copies a profile. The trusted host must disable recordings and expose only the returned gated browser tools. Use the owner's verified executor public key, not a key supplied by the model.
+
+An observed human-verification check returns challenge_required with challenge_type human_verification. The owner completes it in that same browser. Call resume to recheck the existing attempt, never to refill or solve the check. The original verification window is at most five minutes and is not extended. Expiry or an unrecognized challenge stays unverified. A fill or submission is not a successful sign-in.
+
+Production acceptance is pending an authorized original browser/profile and paired executor. Minimum extension version for the explicit human_verification state is 0.3.1. The installed extension must support the matching challenge state. Store0.3.0 supports target-v2 but does not report human_verification yet. This integration does not remotely control the owner's personal browser or connect Instinct to it.

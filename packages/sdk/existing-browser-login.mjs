@@ -6,12 +6,13 @@ const KEY=/^[A-Za-z0-9+/]{43}=$/;
 function id(x){if(!UUID.test(x??''))throw Error('invalid_id');return x;}
 function https(x){const u=new URL(x);if(u.protocol!=='https:'||u.username||u.password||u.hash)throw Error('invalid_target_url');return u;}
 export function createExistingBrowserLogin({client,host,now=Date.now,randomId=()=>crypto.randomUUID()}={}){
- if(!client||!['requestTarget','requestStatus','use'].every(k=>typeof client[k]==='function')||!host||!['prepareTarget','executeTarget','verifyLogin'].every(k=>typeof host[k]==='function'))throw Error('existing_browser_integration_required');
+ if(!client||!['requestTarget','requestStatus','use'].every(k=>typeof client[k]==='function')||!host||!['prepareTarget','preflightTarget','executeTarget','verifyLogin'].every(k=>typeof host[k]==='function'))throw Error('existing_browser_integration_required');
  const flows=new Map();
  function receipt(f,status,extra={}){return{login_id:f.id,request_id:f.request_id,status,...(f.target.login_step?{login_step:f.target.login_step}:{}),...extra};}
  function completion(f,checked){
-  f.phase=checked?.authenticated===true&&checked?.same_browser===true?'signed_in':checked?.same_browser===true&&checked?.challenge==='one_time_code'?'challenge_required':'login_unverified';
-  return receipt(f,f.phase,{filled:true,login_verified:f.phase==='signed_in',...(f.phase==='challenge_required'?{challenge_type:'one_time_code',next_action:'complete_challenge_in_existing_browser_then_recheck'}:{})});
+  if(now()>=f.expires){f.phase='login_unverified';return receipt(f,f.phase,{filled:true,login_verified:false,next_action:'verification_window_expired'});}
+  f.phase=checked?.same_browser===true&&['one_time_code','human_verification'].includes(checked?.challenge)?'challenge_required':checked?.authenticated===true&&checked?.same_browser===true?'signed_in':'login_unverified';
+  return receipt(f,f.phase,{filled:true,login_verified:f.phase==='signed_in',...(f.phase==='challenge_required'?{challenge_type:checked.challenge,next_action:'complete_challenge_in_existing_browser_then_recheck'}:{})});
  }
  async function begin({agent_id,intended_url,login_plan}={}){
   id(agent_id);const url=https(intended_url);
@@ -41,6 +42,8 @@ export function createExistingBrowserLogin({client,host,now=Date.now,randomId=()
    if(r.state==='pending')return receipt(f,'awaiting_approval');
    if(r.state!=='approved'){f.phase=['denied','expired','revoked'].includes(r.state)?r.state:'unavailable';return receipt(f,f.phase);}
    id(r.grant_id);if(now()>=f.expires){f.phase='expired';return receipt(f,f.phase);}
+   await host.preflightTarget(f.target);
+   if(now()>=f.expires){f.phase='expired';return receipt(f,f.phase);}
    // From this point an ambiguous network failure is terminal. Never refill.
    f.phase='unknown';
    const op=await client.use(r.grant_id,{origin:f.target.origin,executor_key_id:f.target.executor_key_id,idempotency_key:f.idempotency_key});

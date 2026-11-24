@@ -1,6 +1,6 @@
 {
   "name": "tryagentkey",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "author": "AgentKey, Inc.",
   "type": "module",
   "exports": {
@@ -19,6 +19,30 @@
     "./auto": {
       "types": "./auto.d.mts",
       "default": "./auto.mjs"
+    },
+    "./browser": {
+      "types": "./browser/setup.d.mts",
+      "default": "./browser/setup.mjs"
+    },
+    "./browser/playwright": {
+      "types": "./browser/playwright-integration.d.mts",
+      "default": "./browser/playwright-integration.mjs"
+    },
+    "./browser/puppeteer": {
+      "types": "./browser/puppeteer-integration.d.mts",
+      "default": "./browser/puppeteer-integration.mjs"
+    },
+    "./browser/framework": {
+      "types": "./browser/framework-integration.d.mts",
+      "default": "./browser/framework-integration.mjs"
+    },
+    "./browser/openai-agents": {
+      "types": "./browser/openai-agents-integration.d.mts",
+      "default": "./browser/openai-agents-integration.mjs"
+    },
+    "./browser/conformance": {
+      "types": "./browser/puppeteer-conformance.d.mts",
+      "default": "./browser/puppeteer-conformance.mjs"
     }
   },
   "engines": {
@@ -41,7 +65,8 @@
     "README.md",
     "AGENTKEY_GUIDE.md",
     "LICENSE",
-    "NOTICE"
+    "NOTICE",
+    "browser/"
   ],
   "dependencies": {
     "@tryagentkey/runtime": "0.1.0"

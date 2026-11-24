@@ -13,15 +13,16 @@ export interface DeliveryTarget {
 }
 export interface LoginHost {
   prepareTarget(url: string, plan?: LoginPlan): Promise<DeliveryTarget>;
+  preflightTarget(target: DeliveryTarget): Promise<void>;
   executeTarget(operationId: string, target: DeliveryTarget): Promise<{ok: boolean; filled: boolean}>;
-  verifyLogin(target: DeliveryTarget): Promise<{authenticated: boolean; same_browser: boolean; challenge?: 'one_time_code'}>;
+  verifyLogin(target: DeliveryTarget): Promise<{authenticated: boolean; same_browser: boolean; challenge?: 'one_time_code' | 'human_verification'}>;
 }
 export type LoginReceipt = {
   login_id: string; request_id: string;
   status: 'awaiting_approval' | 'in_progress' | 'signed_in' | 'challenge_required' | 'login_unverified' | 'expired' |
     'denied' | 'revoked' | 'unavailable' | 'unknown' | 'fill_failed' | 'step_completed';
   login_step?: DeliveryTarget['login_step']; approval_url?: string; expires_at?: string;
-  filled?: boolean; login_verified?: boolean; challenge_type?: 'one_time_code'; next_action?: string;
+  filled?: boolean; login_verified?: boolean; challenge_type?: 'one_time_code' | 'human_verification'; next_action?: string;
 };
 export type LoginInput = {agent_id: string; intended_url: string; login_plan?: LoginPlan};
 export interface ExistingBrowserLogin {
