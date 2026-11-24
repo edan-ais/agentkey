@@ -69,6 +69,28 @@ export async function openGrantEnvelope(encoded,scope,key){
  return {username:p.username,password:p.password};
 }
 
+// Agent-created login envelope (AgentKey.agent-login.v1): byte-compatible
+// port of apps/mobile/src/crypto.ts sealAgentLogin. Sealed to the owner's
+// published recipient key; only the owner's private key opens it.
+function agentLoginBinding(s){return enc.encode(['AgentKey.agent-login.v1',s.ownerID.toLowerCase(),s.agentID.toLowerCase(),s.recipientKeyID.toLowerCase(),s.origin].join('\n'));}
+function agentLoginWire(s){return {ownerID:s.ownerID.toUpperCase(),agentID:s.agentID.toUpperCase(),recipientKeyID:s.recipientKeyID.toUpperCase(),origin:s.origin};}
+export async function sealAgentLogin(login,scope,recipientPublicKeyB64){
+ if(!scope||!UUID.test(scope.ownerID)||!UUID.test(scope.agentID)||!UUID.test(scope.recipientKeyID)||!validOrigin(scope.origin))throw new RuntimeError('invalid_request');
+ if(!login||typeof login.title!=='string'||typeof login.username!=='string'||typeof login.password!=='string'||!login.password)throw new RuntimeError('invalid_request');
+ const recipient=await crypto.subtle.importKey('raw',b64d(recipientPublicKeyB64),{name:'X25519'},false,[]);
+ const eph=await crypto.subtle.generateKey({name:'X25519'},false,['deriveBits']);
+ const shared=await crypto.subtle.deriveBits({name:'X25519',public:recipient},eph.privateKey,256);
+ const binding=agentLoginBinding(scope);
+ const hk=await crypto.subtle.importKey('raw',shared,{name:'HKDF'},false,['deriveKey']);
+ const key=await crypto.subtle.deriveKey({name:'HKDF',hash:'SHA-256',salt:enc.encode('AgentKey.agent-login.v1'),info:binding},hk,{name:'AES-GCM',length:256},false,['encrypt']);
+ const plain=enc.encode(JSON.stringify({scope:agentLoginWire(scope),title:login.title,username:login.username,password:login.password}));
+ if(plain.length>15000)throw new RuntimeError('invalid_request');
+ const iv=crypto.getRandomValues(new Uint8Array(12));
+ const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:binding},key,plain));
+ const sealed=new Uint8Array(12+ct.length);sealed.set(iv);sealed.set(ct,12);
+ const pub=await crypto.subtle.exportKey('raw',eph.publicKey);
+ return b64e(enc.encode(JSON.stringify({version:1,scope:agentLoginWire(scope),ephemeralPublicKey:b64e(new Uint8Array(pub)),sealed:b64e(sealed)})));
+}
 export class AgentKeyRuntime{
  constructor({baseURL='https://agentkey.waiwiser.com/api/public/agentkey-api',key,session,onSession,fetchImpl=fetch}){Object.assign(this,{baseURL,key,session,onSession,fetchImpl});}
  async #call(method,path,body,bearer){
@@ -130,6 +152,41 @@ export class AgentKeyRuntime{
  // closed unless the page's current origin exactly matches the grant origin.
  // Reports exactly one outcome; a submitted form is reported as 'unknown'
  // unless verify() confirms the signed-in state.
+ // Agent-created logins (glove signup-and-save). The runtime seals to the
+ // owner's current recipient key; the server only ever stores ciphertext.
+ // Executor-scoped proposal lifecycle. Every call is bound to the glove
+ // session the runtime is hosting: the server derives owner and agent from
+ // the session's immutable binding, so a caller can never name them.
+ async ownerRecipientKey(sessionId){
+  if(!UUID.test(sessionId))throw new RuntimeError('invalid_request');
+  const r=await this.#call('POST','/v1/executor/glove/proposals/key',{session_id:sessionId},await this.#token());
+  if(!r||!UUID.test(r.owner_id)||!UUID.test(r.agent_id)||!UUID.test(r.recipient_key_id)||typeof r.public_key!=='string'||r.public_key.length!==44)throw new RuntimeError('invalid_response');
+  return {ownerId:r.owner_id,agentId:r.agent_id,keyId:r.recipient_key_id,publicKey:r.public_key};
+ }
+ async proposeLogin({sessionId,origin,recipientKeyId,ciphertext}){
+  if(!UUID.test(sessionId)||!UUID.test(recipientKeyId)||!validOrigin(origin)||typeof ciphertext!=='string'||ciphertext.length<100||ciphertext.length>40000)throw new RuntimeError('invalid_request');
+  const r=await this.#call('POST','/v1/executor/glove/proposals',{session_id:sessionId,origin,recipient_key_id:recipientKeyId,ciphertext},await this.#token());
+  if(!r||!UUID.test(r.proposal_id)||typeof r.state!=='string')throw new RuntimeError('invalid_response');
+  return {proposalId:r.proposal_id,status:r.state};
+ }
+ async proposalStatus(id,sessionId){if(!UUID.test(id)||!UUID.test(sessionId))throw new RuntimeError('invalid_request');const r=await this.#call('POST','/v1/executor/glove/proposals/'+id+'/status',{session_id:sessionId},await this.#token());if(!r||typeof r.state!=='string')throw new RuntimeError('invalid_response');return r.state;}
+ async markLoginProposalUncertain(id,sessionId){if(!UUID.test(id)||!UUID.test(sessionId))throw new RuntimeError('invalid_request');return this.#call('POST','/v1/executor/glove/proposals/'+id+'/uncertain',{session_id:sessionId},await this.#token());}
+ async confirmLoginProposal(id,sessionId){if(!UUID.test(id)||!UUID.test(sessionId))throw new RuntimeError('invalid_request');return this.#call('POST','/v1/executor/glove/proposals/'+id+'/confirm',{session_id:sessionId},await this.#token());}
+ async retractLoginProposal(id,sessionId){if(!UUID.test(id)||!UUID.test(sessionId))throw new RuntimeError('invalid_request');return this.#call('POST','/v1/executor/glove/proposals/'+id+'/retract',{session_id:sessionId},await this.#token());}
+ // Seal a generated signup credential to the owner and stage it BEFORE the
+ // signup is committed. agentId must be the agent the session was redeemed
+ // for; the owner verifies the sealed scope against the proposal row, so a
+ // wrong agent id fails closed at import. Returns the durable proposal id;
+ // the credential itself is never returned, logged or sent anywhere else.
+ async proposeCreatedLogin({sessionId,agentId,origin,username,title,password}){
+  if(!UUID.test(sessionId)||!UUID.test(agentId))throw new RuntimeError('invalid_request');
+  if(typeof username!=='string'||username.length>200)throw new RuntimeError('invalid_request');
+  if(title!==undefined&&(typeof title!=='string'||title.length>120))throw new RuntimeError('invalid_request');
+  const k=await this.ownerRecipientKey(sessionId);
+  if(k.agentId.toLowerCase()!==agentId.toLowerCase())throw new RuntimeError('scope_mismatch');
+  const ciphertext=await sealAgentLogin({title:title??'',username,password},{ownerID:k.ownerId,agentID:agentId,recipientKeyID:k.keyId,origin},k.publicKey);
+  return this.proposeLogin({sessionId,origin,recipientKeyId:k.keyId,ciphertext});
+ }
  async fillOperation(operationId,page,{usernameSelector='input[autocomplete="username"],input[type="email"],input[name*="user" i],input[name*="email" i]',passwordSelector='input[type="password"]',submit=true,verify,targetBound=false,gloveSessionId,onSecret}={}){
   if(!UUID.test(operationId)||(gloveSessionId!==undefined&&(!UUID.test(gloveSessionId)||targetBound)))throw new RuntimeError('invalid_request');
   if(verify!==undefined&&typeof verify!=='function')throw new RuntimeError('invalid_verification');
@@ -166,3 +223,4 @@ export class AgentKeyRuntime{
   return {operation_id:operationId,outcome,submitted,verification,...(failure?{code:'submission_unconfirmed'}:{})};
  }
 }
+

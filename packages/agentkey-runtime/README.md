@@ -35,3 +35,19 @@ Fails closed when the page origin differs or the form is ambiguous. Reports exac
 `GET self`, `POST heartbeat`, `GET pending`, `GET operations/<id>` (no ciphertext), `POST operations/<id>/claim`, `POST target-operations/<id>/claim`, `POST operations/<id>/complete {completed|failed|unknown}`, `POST target-support`, `POST targets`, `POST session/refresh`. All under `/v1/executor/`.
 
 Owner disabling the runtime stops new claims; poll `self()` and stop when it returns nothing.
+
+## Agent-created login proposals (0.1.1)
+
+An enrolled executor hosting an open Glove session can stage an encrypted login proposal for its owner. The session binds the owner, requesting agent, and executor. These methods do not create a website account by themselves, approve a grant, or import a login into an owner vault.
+
+- `ownerRecipientKey(sessionId)` fetches the session owner's published recipient key.
+- `proposeCreatedLogin({sessionId, agentId, origin, username, title, password})` seals the credential to that key and stages a proposal. `agentId` must match the agent bound to the session. `origin` must be an exact HTTPS origin. It returns a proposal identifier and state, not the password.
+- `proposalStatus(proposalId, sessionId)` reads its state.
+- `confirmLoginProposal(proposalId, sessionId)` records confirmed account creation. Call only after the website outcome is verified.
+- `markLoginProposalUncertain(proposalId, sessionId)` preserves an uncertain outcome for owner recovery. Do not blindly repeat signup.
+- `retractLoginProposal(proposalId, sessionId)` retracts a staged proposal when appropriate.
+- `proposeLogin({sessionId, origin, recipientKeyId, ciphertext})` is the lower-level staging method for an already sealed envelope.
+
+The exported `sealAgentLogin(login, scope, recipientPublicKeyB64)` helper uses an ephemeral X25519 key, HKDF-SHA256, and AES-256-GCM with the owner, agent, recipient-key identifier, and origin bound into authenticated data. The owner's recipient private key is needed to open the result. Server-side authorization and state checks still apply.
+
+This runtime handles plaintext within the trusted executor process while sealing. Do not put a real password in a model prompt, tool result, log, or source file. A caller that passes a password string directly already has access to that string; this API alone does not hide it from that caller. Owner-vault import, backup, and device notification delivery are separate workflows and are not proved by staging or confirming a proposal.
