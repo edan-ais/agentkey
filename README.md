@@ -79,6 +79,11 @@ Cloud is for sync, multiple users and phone approval. It is not needed to use th
 
 ## Help
 
+[![Add to Kiro](https://kiro.dev/images/add-to-kiro.svg)](https://kiro.dev/launch/mcp/add?name=AgentKey&config=%7B%22url%22%3A%22https%3A%2F%2Fagentkey.waiwiser.com%2Fapi%2Fagent-connectors%2Fmcp%22%2C%22disabled%22%3Afalse%2C%22autoApprove%22%3A%5B%5D%7D)
+
+- [Privacy policy](https://agentkey.waiwiser.com/privacy)
+- Support: [agentkey@waiwiser.com](mailto:agentkey@waiwiser.com)
+
 - [Troubleshooting and FAQ](docs/TROUBLESHOOTING.md)
 - [Open an issue](https://github.com/edan-ais/agentkey/issues/new/choose) or start a [discussion](https://github.com/edan-ais/agentkey/discussions)
 - [Contributing](CONTRIBUTING.md)
