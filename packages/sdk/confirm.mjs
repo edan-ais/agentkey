@@ -14,12 +14,12 @@ async function isVisible(h){try{return (await h.isVisible?.())??((await h.boundi
 export async function visible(page,sel){for(const h of await page.$$(sel))if(await isVisible(h))return true;return false;}
 async function bodyText(page){try{return String(await page.evaluate(()=>document.body?(document.body.innerText||'').trim().slice(0,2000):''));}catch{return '';}}
 
-export async function pageState(page){
+export async function pageState(page,{root=page}={}){
  const url=String(page.url?.()??'');
  if(!url||url==='about:blank'||url.startsWith('chrome-error:')||url.startsWith('data:'))return 'blank';
- if(await visible(page,CHALLENGE))return 'challenge';
- if(await visible(page,PASS))return 'login_form';
- if(await visible(page,USER))return 'username_step';
+ if(await visible(root,CHALLENGE))return 'challenge';
+ if(await visible(root,PASS))return 'login_form';
+ if(await visible(root,USER))return 'username_step';
  if(!(await bodyText(page)))return 'blank';
  return 'clear';
 }

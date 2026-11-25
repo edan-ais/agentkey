@@ -3,7 +3,7 @@ import {lstatSync,readFileSync,writeFileSync,realpathSync,openSync,closeSync,fst
 import {join} from 'node:path';
 const START='<!-- AgentKey managed instructions: start -->',END='<!-- AgentKey managed instructions: end -->';
 const BODY=`## AgentKey login setup for this coding agent
-The user ran npx tryagentkey to set up Free Local Mode. Finish the integration yourself; do not ask the developer to add imports or edit agent code manually.
+The user ran npx tryagentkey to set up Free Local Mode. Use bare npx tryagentkey setup only, not init: direct init is a legacy human CLI that prints an approval link. Never approve setup or login on behalf of the owner. Finish supported integration without asking the developer to add imports or edit agent code manually.
 
 - Inspect this project's actual agent entry point and browser tools. Install the published tryagentkey package in the project if missing. Use its local default, with no AgentKey account or cloud pairing required. Preserve an existing explicitly configured cloud mode; do not silently migrate vaults or credentials.
 - Wire agentkey() and its login tools into the existing agent framework. Pass the EXISTING Playwright/Puppeteer page, or call setPage with it. Register the login tools in the actual agent, not only an unused starter file. Preserve existing tools and behavior. Do not start a replacement browser, export cookies, or copy a profile.

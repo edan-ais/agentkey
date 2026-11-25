@@ -1,6 +1,6 @@
 {
   "name": "tryagentkey",
-  "version": "0.5.6",
+  "version": "0.6.0",
   "author": "AgentKey, Inc.",
   "type": "module",
   "exports": {
@@ -69,7 +69,9 @@
     "browser/"
   ],
   "dependencies": {
-    "@tryagentkey/runtime": "0.1.0"
+    "@tryagentkey/runtime": "0.1.0",
+    "@playwright/mcp": "0.0.86",
+    "@modelcontextprotocol/sdk": "1.25.2"
   },
   "main": "./index.cjs",
   "types": "./index.d.mts",

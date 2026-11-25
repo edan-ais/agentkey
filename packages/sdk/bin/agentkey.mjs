@@ -18,6 +18,7 @@ import {createRequire} from 'node:module';
 import {STARTERS,STARTER_FILE} from '../starters.mjs';
 import {installAgentInstructions,preflightAgentInstructions} from '../agent-instructions.mjs';
 import {realpathSync} from 'node:fs';
+import {installBrowserBridge} from '../browser/install-mcp.mjs';
 import {fileURLToPath} from 'node:url';
 
 const BANNER='Running in Free Local Mode (Single-User). Upgrading to multi-tenant cloud? Run npx tryagentkey link.';
@@ -87,26 +88,31 @@ export async function forget(target,{log=console.log,home=agentkeyHome()}={}){
 // existing cloud link), writes one starter file for the detected framework,
 // then runs the checks and prints only what still needs the developer.
 export async function setup({cwd=process.cwd(),log=console.log,doctorImpl=doctor,...o}={}){
+ if(process.env.CI||process.env.AGENTKEY_NO_OPEN)throw Error('Run bare setup in a desktop session so the owner can approve in the local browser.');
  const instructionPlan=preflightAgentInstructions({cwd});
  const cfg=readEnv(process.env,cwd);const p=detectProject(cwd);
+ const keepCloud=!!cfg.apiKey&&cfg.mode!=='local';
+ if(!keepCloud)installBrowserBridge({cwd,write:false});
  if(cfg.apiKey&&cfg.mode!=='local')log('✓ Already linked to AgentKey Cloud — keeping it.');
- else await initLocal({cwd,log,...o,showNext:false});
+ else await initLocal({cwd,log,...o,onLink:()=>log('AgentKey owner approval opened in your local browser.'),showNext:false});
  const file=join(cwd,STARTER_FILE);
  if(!existsSync(file)){writeFileSync(file,STARTERS[p.framework]??STARTERS.plain);log(`✓ Wrote ${STARTER_FILE} for ${p.framework==='plain'?'your agent':p.framework}`);}
  else log(`• ${STARTER_FILE} already exists — left it alone`);
+ const browserBridge=keepCloud?{plugin_registered:false,state:'cloud_mode_preserved'}:installBrowserBridge({cwd});
+ log(browserBridge.plugin_registered ? `✓ Existing Playwright MCP connection registered. Restart your coding host to load AgentKey login tools in that browser.` : `• Browser bridge: ${browserBridge.state}. Existing configuration unchanged.`);
  const wiring=installAgentInstructions({cwd,plan:instructionPlan});
  log('✓ Installed coding-agent instructions: '+wiring.files.map(x=>x.file).join(', ')+'. Your coding agent finishes browser integration; no developer code edits are needed.');
  const out=await doctorImpl({cwd,home:o.home??agentkeyHome(),log:()=>{}});const todo=out.filter(l=>l.startsWith('✗'));
  log(todo.length?'Still needed:\n'+todo.map(l=>'  '+l.slice(2)).join('\n'):'✓ Local setup complete. Ask your coding agent to follow AGENTS.md and finish wiring its existing browser. Runtime login is not connected until that step succeeds.');
- return {framework:p.framework,todo,...wiring};
+ return {framework:p.framework,todo,...wiring,browser_bridge:browserBridge};
 }
 
 let isMain=false;try{isMain=!!process.argv[1]&&realpathSync(process.argv[1])===fileURLToPath(import.meta.url);}catch{}
 if(isMain){
  const [cmd,...rest]=process.argv.slice(2);const flag=n=>{const i=rest.indexOf('--'+n);return i>=0?rest[i+1]:undefined;};
  const usage='tryagentkey [setup] | init | link [--code CODE] [--name NAME] | doctor | status | permissions | revoke <id|site|--all> | forget <site> | secret set NAME';
- const run=(!cmd||cmd==='setup')?setup():cmd==='init'?(rest.includes('--cloud')?link({code:flag('code'),name:flag('name')}):initLocal()):cmd==='link'?link({code:flag('code'),name:flag('name')}):cmd==='doctor'?doctor():cmd==='status'?status():cmd==='permissions'?permissions():cmd==='revoke'?revoke(rest[0]):cmd==='forget'?forget(rest[0]):cmd==='secret'&&rest[0]==='set'&&rest[1]?setSecret(rest[1]):Promise.reject(new AgentKeyError('usage',usage));
- run.then(()=>process.exit(0),e=>{console.error('AgentKey: '+(e.hint||e.message));process.exit(1);});
+ const run=cmd==='browser-mcp'?import('../browser/run-local-mcp.mjs').then(m=>m.run()):(!cmd||cmd==='setup')?setup():cmd==='init'?(rest.includes('--cloud')?link({code:flag('code'),name:flag('name')}):initLocal()):cmd==='link'?link({code:flag('code'),name:flag('name')}):cmd==='doctor'?doctor():cmd==='status'?status():cmd==='permissions'?permissions():cmd==='revoke'?revoke(rest[0]):cmd==='forget'?forget(rest[0]):cmd==='secret'&&rest[0]==='set'&&rest[1]?setSecret(rest[1]):Promise.reject(new AgentKeyError('usage',usage));
+ run.then(()=>{if(cmd!=='browser-mcp')process.exit(0)},e=>{console.error('AgentKey: '+(e.hint||e.message));process.exit(1);});
 }
 
 async function setSecret(name){
