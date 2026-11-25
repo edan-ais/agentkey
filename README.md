@@ -6,7 +6,9 @@
 [![npm](https://img.shields.io/npm/v/tryagentkey.svg)](https://www.npmjs.com/package/tryagentkey)
 [![CI](https://github.com/edan-ais/agentkey/actions/workflows/ci.yml/badge.svg)](https://github.com/edan-ais/agentkey/actions/workflows/ci.yml)
 
-> Demo film: coming soon. This space is reserved for a short real recording of an agent logging in through AgentKey.
+[![AgentKey developer demo | SDK 0.6.2](https://img.youtube.com/vi/8_KE07or2-k/hqdefault.jpg)](https://youtu.be/8_KE07or2-k)
+
+> Demo film: [AgentKey developer demo | SDK 0.6.2](https://youtu.be/8_KE07or2-k). Uncut: an agent asks to log in, the owner approves, and AgentKey fills the credential. The agent never sees the password.
 
 AgentKey is a password vault built for AI agents. The agent asks to log in, you approve, and AgentKey fills the credential into your browser page. The password does not pass through your agent or your model.
 
