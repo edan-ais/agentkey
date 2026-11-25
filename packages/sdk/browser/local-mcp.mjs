@@ -13,9 +13,10 @@ const text=x=>({content:[{type:'text',text:JSON.stringify(x)}]});
 const allowed=new Set(['browser_navigate','browser_navigate_back','browser_snapshot','browser_click','browser_type','browser_fill_form','browser_press_key','browser_select_option','browser_hover','browser_drag','browser_wait_for','browser_tabs','browser_resize','browser_take_screenshot','browser_handle_dialog','browser_close']);
 const schema=(name,description,properties={},required=[])=>({name,description,inputSchema:{type:'object',properties,required,additionalProperties:false}});
 const extras=[schema('agentkey_pages','List opaque existing-browser page handles, without page contents.'),schema('agentkey_login','Request owner-approved login on the existing page. Poll status; no passwords in arguments.',{page:{type:'string'}},['page']),schema('agentkey_status','Read a login result or redacted state. Owner approval opens separately in the OS browser.',{request:{type:'string'}},['request'])];
-export async function createLocalBrowserMCP({config={},cwd=process.cwd(),home=agentkeyHome()}={}){
- if(!config.browser?.cdpEndpoint&&!config.browser?.remoteEndpoint&&!config.browser?.extension)throw Error('existing_browser_connection_required');
- if(config.browser?.launchOptions||config.browser?.contextOptions)throw Error('launch_and_context_options_not_supported');
+export async function createLocalBrowserMCP({config={},cwd=process.cwd(),home=agentkeyHome(),managed=false}={}){
+ if(managed)config={browser:{browserName:'chromium',isolated:true,launchOptions:{channel:'chromium',headless:false}},saveSession:false};
+ if(!managed&&!config.browser?.cdpEndpoint&&!config.browser?.remoteEndpoint&&!config.browser?.extension)throw Error('existing_browser_connection_required');
+ if(!managed&&(config.browser?.launchOptions||config.browser?.contextOptions))throw Error('launch_and_context_options_not_supported');
  if(config.saveSession||config.browser?.launchOptions?.tracesDir||config.browser?.contextOptions?.recordVideo||config.browser?.contextOptions?.recordHar)throw Error('recording_must_be_disabled');
  if(globalThis[Symbol.for('agentkey.playwright.register')])throw Error('one_bridge_per_process');
  if(process.env.CI||process.env.AGENTKEY_NO_OPEN)throw Error('desktop_session_required_for_owner_approval');

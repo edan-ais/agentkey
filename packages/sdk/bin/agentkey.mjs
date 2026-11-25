@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import {installManagedBrowser} from '../browser/install-managed.mjs';
 // npx tryagentkey         — one command: vault + coding-agent instructions + checks
 // npx tryagentkey init    — Free Local Mode: local vault + one-tap local approval
 // npx tryagentkey link    — move this project to AgentKey Cloud (pairing code)
@@ -18,7 +19,6 @@ import {createRequire} from 'node:module';
 import {STARTERS,STARTER_FILE} from '../starters.mjs';
 import {installAgentInstructions,preflightAgentInstructions} from '../agent-instructions.mjs';
 import {realpathSync} from 'node:fs';
-import {installBrowserBridge} from '../browser/install-mcp.mjs';
 import {fileURLToPath} from 'node:url';
 
 const BANNER='Running in Free Local Mode (Single-User). Upgrading to multi-tenant cloud? Run npx tryagentkey link.';
@@ -92,18 +92,18 @@ export async function setup({cwd=process.cwd(),log=console.log,doctorImpl=doctor
  const instructionPlan=preflightAgentInstructions({cwd});
  const cfg=readEnv(process.env,cwd);const p=detectProject(cwd);
  const keepCloud=!!cfg.apiKey&&cfg.mode!=='local';
- if(!keepCloud)installBrowserBridge({cwd,write:false});
+ if(!keepCloud)installManagedBrowser({cwd,install:false});
  if(cfg.apiKey&&cfg.mode!=='local')log('✓ Already linked to AgentKey Cloud — keeping it.');
  else await initLocal({cwd,log,...o,onLink:()=>log('AgentKey owner approval opened in your local browser.'),showNext:false});
  const file=join(cwd,STARTER_FILE);
  if(!existsSync(file)){writeFileSync(file,STARTERS[p.framework]??STARTERS.plain);log(`✓ Wrote ${STARTER_FILE} for ${p.framework==='plain'?'your agent':p.framework}`);}
  else log(`• ${STARTER_FILE} already exists — left it alone`);
- const browserBridge=keepCloud?{plugin_registered:false,state:'cloud_mode_preserved'}:installBrowserBridge({cwd});
- log(browserBridge.plugin_registered ? `✓ Existing Playwright MCP connection registered. Restart your coding host to load AgentKey login tools in that browser.` : `• Browser bridge: ${browserBridge.state}. Existing configuration unchanged.`);
+ const browserBridge=keepCloud?{plugin_registered:false,state:'cloud_mode_preserved'}:installManagedBrowser({cwd});
+ log(browserBridge.plugin_registered ? `✓ Dedicated AgentKey Chromium tool configured for Claude Code, Cursor and trusted-project Codex. Existing browser tools were not changed.` : `• Browser bridge: ${browserBridge.state}. Existing configuration unchanged.`);
  const wiring=installAgentInstructions({cwd,plan:instructionPlan});
- log('✓ Installed coding-agent instructions: '+wiring.files.map(x=>x.file).join(', ')+'. Your coding agent finishes browser integration; no developer code edits are needed.');
+ log('✓ Installed coding-agent instructions: '+wiring.files.map(x=>x.file).join(', ')+'. Dedicated MCP browser setup requires no developer code edits.');
  const out=await doctorImpl({cwd,home:o.home??agentkeyHome(),log:()=>{}});const todo=out.filter(l=>l.startsWith('✗')&&!(browserBridge.plugin_registered&&/No browser library|browser not installed/.test(l)));
- log(todo.length?'Still needed:\n'+todo.map(l=>'  '+l.slice(2)).join('\n'):browserBridge.plugin_registered?'✓ Existing-browser bridge configured. Restart the MCP host connection once, then ask your agent to log in. Owner approval is still required.':'✓ Local setup complete. Ask your coding agent to follow AGENTS.md and finish wiring its existing browser. Runtime login is not connected until that step succeeds.');
+ log(todo.length?'Still needed:\n'+todo.map(l=>'  '+l.slice(2)).join('\n'):browserBridge.plugin_registered?'✓ Browser setup built in. Reload the host if already running and accept its MCP/project trust prompt if shown. No code edits. Owner login approval is still required.':'✓ Local setup complete. Ask your coding agent to follow AGENTS.md and finish wiring its existing browser. Runtime login is not connected until that step succeeds.');
  return {framework:p.framework,todo,...wiring,browser_bridge:browserBridge};
 }
 
@@ -111,8 +111,8 @@ let isMain=false;try{isMain=!!process.argv[1]&&realpathSync(process.argv[1])===f
 if(isMain){
  const [cmd,...rest]=process.argv.slice(2);const flag=n=>{const i=rest.indexOf('--'+n);return i>=0?rest[i+1]:undefined;};
  const usage='tryagentkey [setup] | init | link [--code CODE] [--name NAME] | doctor | status | permissions | revoke <id|site|--all> | forget <site> | secret set NAME';
- const run=cmd==='browser-mcp'?import('../browser/run-local-mcp.mjs').then(m=>m.run()):(!cmd||cmd==='setup')?setup():cmd==='init'?(rest.includes('--cloud')?link({code:flag('code'),name:flag('name')}):initLocal()):cmd==='link'?link({code:flag('code'),name:flag('name')}):cmd==='doctor'?doctor():cmd==='status'?status():cmd==='permissions'?permissions():cmd==='revoke'?revoke(rest[0]):cmd==='forget'?forget(rest[0]):cmd==='secret'&&rest[0]==='set'&&rest[1]?setSecret(rest[1]):Promise.reject(new AgentKeyError('usage',usage));
- run.then(()=>{if(cmd!=='browser-mcp')process.exit(0)},e=>{console.error('AgentKey: '+(e.hint||e.message));process.exit(1);});
+ const run=['browser-mcp','browser-mcp-managed'].includes(cmd)?import('../browser/run-local-mcp.mjs').then(m=>m.run({managed:cmd==='browser-mcp-managed'})):(!cmd||cmd==='setup')?setup():cmd==='init'?(rest.includes('--cloud')?link({code:flag('code'),name:flag('name')}):initLocal()):cmd==='link'?link({code:flag('code'),name:flag('name')}):cmd==='doctor'?doctor():cmd==='status'?status():cmd==='permissions'?permissions():cmd==='revoke'?revoke(rest[0]):cmd==='forget'?forget(rest[0]):cmd==='secret'&&rest[0]==='set'&&rest[1]?setSecret(rest[1]):Promise.reject(new AgentKeyError('usage',usage));
+ run.then(()=>{if(!['browser-mcp','browser-mcp-managed'].includes(cmd))process.exit(0)},e=>{console.error('AgentKey: '+(e.hint||e.message));process.exit(1);});
 }
 
 async function setSecret(name){
