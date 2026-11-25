@@ -10,7 +10,7 @@ const fail=(code,extra={})=>({outcome:'failed',filled:false,code,...extra});
 // takeCredential(): called only right before typing, after the page origin is re-checked.
 export async function fillLogin(page,takeCredential,{origin,verify,successSelector,onHandoff,handoffTimeoutMs=300000,settleMs=8000,singleSubmission=false,formRoot,resolveFormRoot}={}){
  const signinUrl=String(page.url());
- const secureForm=async()=>{if(resolveFormRoot)formRoot=await resolveFormRoot(page);if(formRoot){const action=await formRoot.evaluate(e=>e.action);if(action&&new URL(action,page.url()).protocol!=='https:')throw Object.assign(Error('insecure_form_action'),{code:'insecure_form_action'});}};
+ const secureForm=async()=>{if(resolveFormRoot)formRoot=await resolveFormRoot(page);if(formRoot){const action=await formRoot.evaluate(e=>e.getAttribute('action'));if(action&&new URL(action,page.url()).protocol!=='https:')throw Object.assign(Error('insecure_form_action'),{code:'insecure_form_action'});}};
  await secureForm();
  let submitted=false;
  const state=async()=>{if(await pageState(page)==='challenge')return 'challenge';return pageState(page,{root:!submitted&&formRoot?formRoot:page})};

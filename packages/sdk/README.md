@@ -204,7 +204,7 @@ Production acceptance is pending an authorized original browser/profile and pair
 
 Run `npx tryagentkey`. Free Local Mode needs no AgentKey account. Setup first preflights all instruction files, then appends a managed section to project AGENTS.md and to an existing CLAUDE.md, preserving other text. Your coding agent reads those instructions and wires the local SDK into its actual existing browser tools; the developer does not add the lines manually. Existing instruction files with symlinks, hard links, conflicting managed markers or a different managed section are refused before setup begins. Existing files are never rewritten. Writes are append-only with checks before and after, not a multi-file transaction or a guarantee against concurrent edits. A late failure reports partial changes; inspect them before retrying. Existing cloud configurations are preserved and their doctor check may contact the cloud service. Free Local Mode makes no AgentKey cloud calls.
 
-This installs instructions, not a running MCP server or automatic browser attachment. Agent wiring remains pending until the supported coding agent carries it out and a real authorized login completes. Runtime agents that cannot edit their project still need a browser bridge. No website login permission is granted by setup.
+For hosts without the supported project Playwright MCP configuration, this installs instructions rather than automatic browser attachment. Agent wiring remains pending until the supported coding agent carries it out and a real authorized login completes. Runtime agents that cannot edit their project still need a browser bridge. No website login permission is granted by setup.
 
 
 ## Existing-browser MCP connection (0.6.0)
@@ -219,3 +219,5 @@ Other MCP servers, browser extensions and arbitrary code under the same OS accou
 
 
 Security boundary: this bridge protects against a model whose only browser access is the filtered MCP tools on this connection. The local `machine.key` sits beside `vault.enc`. Any process running as the same OS user, including a model with shell access, can read the key and decrypt saved logins. In CDP mode another local process can drive that browser. This is not a sandbox, hardware-backed vault, or proof of human presence. The legacy approval wording about the computer means local storage, not isolation from other programs on it. Do not give the model another browser-control channel or shell access if this boundary is required. The busy window runs from accepting a login request until residual credential DOM is destroyed; other servers and extensions are not locked. Local vault writes do not support concurrent writers; use one bridge process per vault. Bare setup requires a desktop session and opens owner approval separately. Direct legacy `init` is for a human terminal, not an agent terminal.
+
+The bridge and bare setup refuse to start when CI or AGENTKEY_NO_OPEN is set, since owner approval needs a desktop browser.

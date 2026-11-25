@@ -102,8 +102,8 @@ export async function setup({cwd=process.cwd(),log=console.log,doctorImpl=doctor
  log(browserBridge.plugin_registered ? `✓ Existing Playwright MCP connection registered. Restart your coding host to load AgentKey login tools in that browser.` : `• Browser bridge: ${browserBridge.state}. Existing configuration unchanged.`);
  const wiring=installAgentInstructions({cwd,plan:instructionPlan});
  log('✓ Installed coding-agent instructions: '+wiring.files.map(x=>x.file).join(', ')+'. Your coding agent finishes browser integration; no developer code edits are needed.');
- const out=await doctorImpl({cwd,home:o.home??agentkeyHome(),log:()=>{}});const todo=out.filter(l=>l.startsWith('✗'));
- log(todo.length?'Still needed:\n'+todo.map(l=>'  '+l.slice(2)).join('\n'):'✓ Local setup complete. Ask your coding agent to follow AGENTS.md and finish wiring its existing browser. Runtime login is not connected until that step succeeds.');
+ const out=await doctorImpl({cwd,home:o.home??agentkeyHome(),log:()=>{}});const todo=out.filter(l=>l.startsWith('✗')&&!(browserBridge.plugin_registered&&/No browser library|browser not installed/.test(l)));
+ log(todo.length?'Still needed:\n'+todo.map(l=>'  '+l.slice(2)).join('\n'):browserBridge.plugin_registered?'✓ Existing-browser bridge configured. Restart the MCP host connection once, then ask your agent to log in. Owner approval is still required.':'✓ Local setup complete. Ask your coding agent to follow AGENTS.md and finish wiring its existing browser. Runtime login is not connected until that step succeeds.');
  return {framework:p.framework,todo,...wiring,browser_bridge:browserBridge};
 }
 

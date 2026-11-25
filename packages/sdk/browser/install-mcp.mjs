@@ -7,6 +7,8 @@ export function installBrowserBridge({cwd=process.cwd(),write=true}={}){
  const root=realpathSync(cwd),path=join(root,'.mcp.json'),old=load(path);
  if(!old)return{plugin_registered:false,state:'no_project_mcp_config',next_action:'keep_existing_coding_instructions'};
  const servers=old.data.mcpServers;if(!servers||typeof servers!=='object'||Array.isArray(servers))throw Error('invalid_mcp_servers');
+ const ready=Object.entries(servers).filter(([,s])=>['npx','npx.cmd'].includes(s?.command)&&Array.isArray(s.args)&&s.args.length===3&&s.args[0]==='-y'&&/^tryagentkey@0\.6\.[0-9]+$/.test(s.args[1])&&s.args[2]==='browser-mcp');
+ if(ready.length===1){const[name,s]=ready[0];if(!s.env?.AGENTKEY_BROWSER_CONFIG||s.env.AGENTKEY_PROJECT_ROOT!==root)throw Error('bridge_config_mismatch');return{plugin_registered:true,state:'already_registered',server:name};}
  const matches=Object.entries(servers).filter(([,s])=>s&&typeof s==='object'&&['npx','npx.cmd'].includes(s.command)&&Array.isArray(s.args)&&s.args.some(a=>supported.has(a)));
  if(matches.length!==1)return{plugin_registered:false,state:matches.length?'ambiguous_playwright_servers':'unsupported_mcp_host'};
  const [name,s]=matches[0];const i=s.args.findIndex(a=>supported.has(a)),args=s.args.slice(i+1);let config={browser:{}};
@@ -22,7 +24,7 @@ export function installBrowserBridge({cwd=process.cwd(),write=true}={}){
  if(config.saveSession||config.browser?.contextOptions?.recordVideo||config.browser?.contextOptions?.recordHar)throw Error('disable_browser_recording_before_bridge');
  if(!write)return{plugin_registered:false,state:'ready_to_register',name};
  const source=JSON.stringify(config);if(Buffer.byteLength(source)>32768)throw Error('browser_config_too_large');
- servers[name]={...s,command:'npx',args:['-y','tryagentkey@0.6.0','browser-mcp'],env:{...s.env,AGENTKEY_BROWSER_CONFIG:source,AGENTKEY_PROJECT_ROOT:root,AGENTKEY_BRIDGE_ID:randomUUID()}};
+ servers[name]={...s,command:'npx',args:['-y','tryagentkey@0.6.1','browser-mcp'],env:{...s.env,AGENTKEY_BROWSER_CONFIG:source,AGENTKEY_PROJECT_ROOT:root,AGENTKEY_BRIDGE_ID:randomUUID()}};
  const current=load(path);if(current?.body!==old.body)throw Error('mcp_config_changed_retry');
  const backup=path+'.agentkey-backup-'+randomBytes(6).toString('hex');
  let fd;try{fd=openSync(backup,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);writeFileSync(fd,old.body)}finally{if(fd!==undefined)closeSync(fd)}
